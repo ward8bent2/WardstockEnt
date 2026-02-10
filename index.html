@@ -8,50 +8,25 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
-        body {
-            font-family: 'Sarabun', sans-serif;
-            background-color: #f8fafc;
-        }
-        @keyframes scanLine {
-            0% { top: 0%; }
-            100% { top: 100%; }
-        }
-        .animate-scanLine {
-            animation: scanLine 2s linear infinite;
-        }
-        @keyframes scaleIn {
-            from { transform: scale(0.95); opacity: 0; }
-            to { transform: scale(1); opacity: 1; }
-        }
-        .animate-scaleIn {
-            animation: scaleIn 0.2s ease-out forwards;
-        }
-        @keyframes fadeIn {
-            from { opacity: 0; }
-            to { opacity: 1; }
-        }
-        .animate-fadeIn {
-            animation: fadeIn 0.3s ease-in-out;
-        }
-        .custom-scrollbar::-webkit-scrollbar {
-            width: 4px;
-        }
-        .custom-scrollbar::-webkit-scrollbar-track {
-            background: #f1f5f9;
-        }
-        .custom-scrollbar::-webkit-scrollbar-thumb {
-            background: #cbd5e1;
-            border-radius: 10px;
-        }
+        body { font-family: 'Sarabun', sans-serif; background-color: #f8fafc; }
+        @keyframes scanLine { 0% { top: 0%; } 100% { top: 100%; } }
+        .animate-scanLine { animation: scanLine 2s linear infinite; }
+        @keyframes scaleIn { from { transform: scale(0.95); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+        .animate-scaleIn { animation: scaleIn 0.2s ease-out forwards; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        .animate-fadeIn { animation: fadeIn 0.3s ease-in-out; }
+        .custom-scrollbar::-webkit-scrollbar { width: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: #f1f5f9; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
     </style>
-<script type="importmap">
+    <script type="importmap">
 {
   "imports": {
-    "recharts": "https://esm.sh/recharts@^3.7.0",
-    "@google/genai": "https://esm.sh/@google/genai@^1.39.0",
-    "react": "https://esm.sh/react@^19.2.4",
-    "react/": "https://esm.sh/react@^19.2.4/",
-    "react-dom/": "https://esm.sh/react-dom@^19.2.4/"
+    "react": "https://esm.sh/react@18.2.0",
+    "react-dom": "https://esm.sh/react-dom@18.2.0/client",
+    "recharts": "https://esm.sh/recharts@2.12.7",
+    "@google/genai": "https://esm.sh/@google/genai@1.3.0",
+    "react/": "https://esm.sh/react@^19.2.4/"
   }
 }
 </script>
@@ -59,8 +34,240 @@
 </head>
 <body>
     <div id="root"></div>
-    <!-- การนำไปขึ้น GitHub Pages: ระบบจะประมวลผล index.tsx อัตโนมัติผ่าน es6 module -->
-    <script type="module" src="./index.tsx"></script>
+
+    <script type="module">
+        import React, { useState, useEffect, useMemo, useRef } from 'react';
+        import ReactDOM from 'react-dom';
+        import { GoogleGenAI, Type } from "@google/genai";
+        import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
+
+        // --- CONSTANTS ---
+        const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbygNSd3p7EAgEyozjsmPKWvhg0hinh27liBJ6mZqOYNJmmMtcMzLUOBmQbn_jXK2FTW/exec';
+        
+        const INITIAL_INVENTORY = [
+            { id: '1', name: 'หน้ากากอนามัย N95', category: 'PPE', currentStock: 50, minLevel: 20, maxLevel: 200, unit: 'ชิ้น', isActive: true },
+            { id: '2', name: 'ถุงมือยาง Size M', category: 'PPE', currentStock: 120, minLevel: 50, maxLevel: 500, unit: 'กล่อง', isActive: true },
+            { id: '3', name: 'สายให้น้ำเกลือ (IV Set)', category: 'Medical Supply', currentStock: 200, minLevel: 100, maxLevel: 1000, unit: 'ชุด', isActive: true },
+            { id: '4', name: 'กระบอกฉีดยา 5ml', category: 'Medical Supply', currentStock: 500, minLevel: 100, maxLevel: 2000, unit: 'ชิ้น', isActive: true },
+            { id: '5', name: 'แอลกอฮอล์ 70% 450ml', category: 'Sanitizer', currentStock: 15, minLevel: 10, maxLevel: 50, unit: 'ขวด', isActive: true },
+            { id: '6', name: 'พลาสเตอร์ปิดแผล', category: 'Medical Supply', currentStock: 80, minLevel: 30, maxLevel: 300, unit: 'ม้วน', isActive: true },
+        ];
+
+        const MOCK_USERS = [
+            { id: 'N001', name: 'พยาบาลสมหญิง', role: 'NURSE', ward: 'Ward 5A' },
+            { id: 'S001', name: 'หัวหน้าสมศรี', role: 'SUPERVISOR', ward: 'Ward 5A' },
+        ];
+
+        // --- SERVICES ---
+        const storageService = {
+            async getInventory() {
+                const data = localStorage.getItem('ward_inventory');
+                return data ? JSON.parse(data) : INITIAL_INVENTORY;
+            },
+            async getTransactions() {
+                const data = localStorage.getItem('ward_transactions');
+                if (!data) return [];
+                return JSON.parse(data).map(t => ({ ...t, timestamp: new Date(t.timestamp) }));
+            },
+            async saveData(inventory, transactions) {
+                localStorage.setItem('ward_inventory', JSON.stringify(inventory));
+                localStorage.setItem('ward_transactions', JSON.stringify(transactions));
+                return true;
+            },
+            async recordToSheets(action, payload) {
+                try {
+                    await fetch(APPS_SCRIPT_URL, {
+                        method: 'POST',
+                        mode: 'no-cors',
+                        headers: { 'Content-Type': 'text/plain' },
+                        body: JSON.stringify({ action, ...payload, timestamp: new Date().toISOString() }),
+                    });
+                    return { success: true };
+                } catch (error) {
+                    console.error("Sheets Error:", error);
+                    return { success: false };
+                }
+            }
+        };
+
+        const aiService = {
+            async getInsights(inventory, transactions) {
+                try {
+                    const ai = new GoogleGenAI({ apiKey: window.process?.env?.API_KEY || '' });
+                    const prompt = `วิเคราะห์สต็อกโรงพยาบาล: ${JSON.stringify(inventory.map(i => ({n: i.name, s: i.currentStock, m: i.minLevel})))}. สรุปเป็นข้อๆ สั้นๆ 1.รายการที่ต้องสั่งด่วน 2.คำแนะนำ ตอบเป็นไทย`;
+                    const response = await ai.models.generateContent({ model: 'gemini-3-flash-preview', contents: prompt });
+                    return response.text;
+                } catch (e) { return "ไม่สามารถดึงข้อมูลวิเคราะห์ได้ในขณะนี้"; }
+            }
+        };
+
+        // --- COMPONENTS ---
+
+        const Dashboard = ({ inventory, transactions }) => {
+            const [insight, setInsight] = useState('กำลังวิเคราะห์...');
+            const activeItems = inventory.filter(i => i.isActive);
+            const lowStock = activeItems.filter(i => i.currentStock <= i.minLevel);
+
+            useEffect(() => {
+                aiService.getInsights(activeItems, transactions).then(setInsight);
+            }, [inventory]);
+
+            return React.createElement('div', { className: "space-y-6 animate-fadeIn" }, 
+                React.createElement('div', { className: "grid grid-cols-1 md:grid-cols-3 gap-4" },
+                    React.createElement('div', { className: "bg-white p-6 rounded-3xl shadow-sm border border-gray-100" },
+                        React.createElement('h3', { className: "text-gray-400 text-xs font-bold uppercase" }, "พัสดุใช้งาน"),
+                        React.createElement('p', { className: "text-2xl font-black" }, activeItems.length)
+                    ),
+                    React.createElement('div', { className: "bg-white p-6 rounded-3xl shadow-sm border border-gray-100" },
+                        React.createElement('h3', { className: "text-gray-400 text-xs font-bold uppercase" }, "สต็อกต่ำกว่าเกณฑ์"),
+                        React.createElement('p', { className: "text-2xl font-black text-rose-600" }, lowStock.length)
+                    ),
+                    React.createElement('div', { className: "bg-white p-6 rounded-3xl shadow-sm border border-gray-100" },
+                        React.createElement('h3', { className: "text-gray-400 text-xs font-bold uppercase" }, "AI Analysis"),
+                        React.createElement('p', { className: "text-xs mt-2 text-blue-800 bg-blue-50 p-3 rounded-xl whitespace-pre-line" }, insight)
+                    )
+                ),
+                React.createElement('div', { className: "bg-white p-6 rounded-3xl shadow-sm border border-gray-100 h-80" },
+                    React.createElement(ResponsiveContainer, { width: "100%", height: "100%" },
+                        React.createElement(BarChart, { data: activeItems },
+                            React.createElement(CartesianGrid, { strokeDasharray: "3 3", vertical: false }),
+                            React.createElement(XAxis, { dataKey: "name", fontSize: 10 }),
+                            React.createElement(YAxis, { fontSize: 10 }),
+                            React.createElement(Tooltip, { contentStyle: { borderRadius: '12px' } }),
+                            React.createElement(Bar, { dataKey: "currentStock", radius: [4, 4, 0, 0] },
+                                activeItems.map((entry, index) => 
+                                    React.createElement(Cell, { key: `cell-${index}`, fill: entry.currentStock <= entry.minLevel ? '#f43f5e' : '#3b82f6' })
+                                )
+                            )
+                        )
+                    )
+                )
+            );
+        };
+
+        const StockUsage = ({ inventory, currentUser, onRecordUsage }) => {
+            const [bedNumber, setBedNumber] = useState('');
+            const [pendingItems, setPendingItems] = useState([]);
+            
+            useEffect(() => {
+                const params = new URLSearchParams(window.location.search);
+                const itemParam = params.get('item');
+                if (itemParam && inventory.length > 0) {
+                    const item = inventory.find(i => i.name === itemParam);
+                    if (item && !pendingItems.some(p => p.itemId === item.id)) {
+                        setPendingItems([{ tempId: Math.random().toString(36), itemId: item.id, itemName: item.name, quantity: 1, unit: item.unit }]);
+                        if (!bedNumber) setBedNumber(currentUser?.ward || '');
+                    }
+                }
+            }, [inventory]);
+
+            const handleSimulateScan = (item) => {
+                setPendingItems([...pendingItems, { tempId: Math.random().toString(36), itemId: item.id, itemName: item.name, quantity: 1, unit: item.unit }]);
+            };
+
+            const handleSubmit = (e) => {
+                e.preventDefault();
+                if (pendingItems.length === 0) return alert('กรุณาเลือกพัสดุ');
+                onRecordUsage(pendingItems.map(p => ({ itemId: p.itemId, quantity: p.quantity, bedNumber })));
+                setPendingItems([]);
+                setBedNumber('');
+                const url = new URL(window.location.href); url.searchParams.delete('item'); window.history.replaceState({}, '', url);
+            };
+
+            return React.createElement('div', { className: "max-w-2xl mx-auto space-y-6" },
+                React.createElement('div', { className: "bg-white p-8 rounded-[40px] shadow-xl border border-gray-100" },
+                    React.createElement('h2', { className: "text-2xl font-black mb-6" }, "ตัดสต็อกรายรายการ"),
+                    React.createElement('form', { onSubmit: handleSubmit, className: "space-y-4" },
+                        React.createElement('input', { 
+                            placeholder: "ระบุเตียง/วอร์ด", 
+                            className: "w-full p-4 bg-gray-50 rounded-2xl border-none outline-none font-bold",
+                            value: bedNumber, onChange: e => setBedNumber(e.target.value)
+                        }),
+                        React.createElement('div', { className: "divide-y" },
+                            pendingItems.map(p => React.createElement('div', { key: p.tempId, className: "py-3 flex justify-between items-center" },
+                                React.createElement('span', { className: "font-bold" }, p.itemName),
+                                React.createElement('div', { className: "flex items-center space-x-3" },
+                                    React.createElement('button', { type: "button", onClick: () => setPendingItems(pendingItems.filter(i => i.tempId !== p.tempId)) }, "❌"),
+                                    React.createElement('span', { className: "font-black text-blue-600" }, p.quantity, " ", p.unit)
+                                )
+                            ))
+                        ),
+                        React.createElement('button', { type: "submit", className: "w-full py-4 bg-blue-600 text-white rounded-2xl font-black shadow-lg" }, "บันทึกตัดสต็อก")
+                    )
+                ),
+                React.createElement('div', { className: "grid grid-cols-2 gap-2" },
+                    inventory.slice(0, 10).map(item => 
+                        React.createElement('button', { key: item.id, onClick: () => handleSimulateScan(item), className: "p-3 bg-white border border-gray-100 rounded-xl text-xs font-bold hover:bg-blue-50" }, item.name)
+                    )
+                )
+            );
+        };
+
+        const App = () => {
+            const [user, setUser] = useState(null);
+            const [view, setView] = useState('DASHBOARD');
+            const [inventory, setInventory] = useState([]);
+            const [transactions, setTransactions] = useState([]);
+
+            useEffect(() => {
+                storageService.getInventory().then(setInventory);
+                storageService.getTransactions().then(setTransactions);
+            }, []);
+
+            const login = (role) => {
+                const u = MOCK_USERS.find(x => x.role === role);
+                setUser(u);
+                if (new URLSearchParams(window.location.search).get('item')) setView('USAGE');
+                else setView(role === 'NURSE' ? 'USAGE' : 'DASHBOARD');
+            };
+
+            const handleRecordUsage = async (items) => {
+                let updatedInv = [...inventory];
+                let newTs = [];
+                for (const item of items) {
+                    const idx = updatedInv.findIndex(i => i.id === item.itemId);
+                    const invItem = updatedInv[idx];
+                    updatedInv[idx] = { ...invItem, currentStock: invItem.currentStock - item.quantity };
+                    newTs.push({ id: Math.random().toString(36), itemId: item.itemId, itemName: invItem.name, type: 'USAGE', quantity: item.quantity, performedBy: user.name, bedNumber: item.bedNumber, timestamp: new Date() });
+                    await storageService.recordToSheets('outcome', { itemName: invItem.name, amount: item.quantity, unit: invItem.unit, requester: user.name, remark: `Bed: ${item.bedNumber}` });
+                }
+                setInventory(updatedInv);
+                setTransactions([...transactions, ...newTs]);
+                storageService.saveData(updatedInv, [...transactions, ...newTs]);
+                alert('บันทึกเรียบร้อย');
+            };
+
+            if (!user) return React.createElement('div', { className: "min-h-screen flex items-center justify-center bg-slate-50" },
+                React.createElement('div', { className: "bg-white p-10 rounded-[40px] shadow-2xl w-full max-w-sm" },
+                    React.createElement('h1', { className: "text-3xl font-black text-center mb-8" }, "WardStock"),
+                    React.createElement('div', { className: "space-y-4" },
+                        React.createElement('button', { onClick: () => login('NURSE'), className: "w-full py-5 bg-blue-600 text-white rounded-3xl font-black" }, "พยาบาลประจำหอผู้ป่วย"),
+                        React.createElement('button', { onClick: () => login('SUPERVISOR'), className: "w-full py-5 bg-white border-2 border-gray-100 rounded-3xl font-black" }, "หัวหน้างาน/โลจิสติกส์")
+                    )
+                )
+            );
+
+            return React.createElement('div', { className: "min-h-screen pb-20" },
+                React.createElement('nav', { className: "bg-white p-6 shadow-sm flex justify-between items-center" },
+                    React.createElement('span', { className: "text-xl font-black" }, "WardStock"),
+                    React.createElement('button', { onClick: () => setUser(null), className: "text-rose-500 font-bold" }, "Logout")
+                ),
+                React.createElement('main', { className: "p-6" },
+                    view === 'DASHBOARD' ? React.createElement(Dashboard, { inventory, transactions }) :
+                    view === 'USAGE' ? React.createElement(StockUsage, { inventory, currentUser: user, onRecordUsage: handleRecordUsage }) : 
+                    React.createElement('div', { className: "text-center py-20 text-gray-400" }, "เมนูนี้กำลังพัฒนาในเวอร์ชัน Single File")
+                ),
+                React.createElement('div', { className: "fixed bottom-0 left-0 right-0 bg-white border-t p-4 flex justify-around" },
+                    React.createElement('button', { onClick: () => setView('DASHBOARD'), className: `text-xs font-black ${view === 'DASHBOARD' ? 'text-blue-600' : 'text-gray-300'}` }, "HOME"),
+                    React.createElement('button', { onClick: () => setView('USAGE'), className: `text-xs font-black ${view === 'USAGE' ? 'text-blue-600' : 'text-gray-300'}` }, "USAGE"),
+                    React.createElement('button', { onClick: () => setView('HISTORY'), className: `text-xs font-black ${view === 'HISTORY' ? 'text-blue-600' : 'text-gray-300'}` }, "HISTORY")
+                )
+            );
+        };
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(React.createElement(App));
+    </script>
 <script type="module" src="/index.tsx"></script>
 </body>
 </html>
