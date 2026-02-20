@@ -1,5 +1,5 @@
 {
-  "name": "wardstock---ระบบจัดการคลังวัสดุทางการแพทย์",
+  "name": "wardstockent",
   "private": true,
   "version": "0.0.0",
   "type": "module",
@@ -9,10 +9,11 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "lucide-react": "^0.563.0",
+    "@google/genai": "^1.41.0",
+    "react-dom": "^19.2.4",
     "react": "^19.2.4",
-    "react-dom": "18.2.0",
-    "recharts": "2.12.7",
-    "@google/genai": "1.3.0"
+    "html5-qrcode": "2.3.8"
   },
   "devDependencies": {
     "@types/node": "^22.14.0",

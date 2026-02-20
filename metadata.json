@@ -1,6 +1,6 @@
 {
-  "name": "WardStock - ระบบจัดการคลังวัสดุทางการแพทย์",
-  "description": "แอปพลิเคชันสำหรับจัดการคลังวัสดุในหอผู้ป่วย (Ward) รองรับการเบิกใช้รายเตียง การรับเข้าพัสดุ และการตรวจสอบสต็อกแบบเรียลไทม์สำหรับหัวหน้างาน",
+  "name": "WardStockEnt",
+  "description": "A professional ward inventory management system featuring QR scanning, shift-end stock counting, and history tracking.",
   "requestFramePermissions": [
     "camera"
   ]

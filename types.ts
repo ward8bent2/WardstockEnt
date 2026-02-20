@@ -1,45 +1,46 @@
 
-export enum UserRole {
-  NURSE = 'NURSE',
-  SUPERVISOR = 'SUPERVISOR'
-}
-
-export interface User {
-  id: string;
-  name: string;
-  role: UserRole;
-  ward: string;
-}
-
 export interface InventoryItem {
   id: string;
   name: string;
-  category: string;
-  currentStock: number;
-  minLevel: number;
-  maxLevel: number;
   unit: string;
-  isActive: boolean;
+  currentStock: number;
+  min: number;
+  max: number;
+  type: string;
+  status?: 'OUT' | 'LOW' | 'NORMAL' | 'OVER';
 }
 
-export interface Transaction {
-  id: string;
+export interface PendingRecord {
+  id: string; 
   itemId: string;
   itemName: string;
-  type: 'USAGE' | 'INTAKE' | 'TRANSFER';
+  unit: string; // เพิ่มฟิลด์ unit
   quantity: number;
+  bedNumber: string;
+  staffName: string;
+  timestamp: string;
+}
+
+export interface HistoryRecord {
+  timestamp: string;
+  itemId: string;
+  itemName: string;
+  quantityUsed: number;
+  staffName: string;
   bedNumber?: string;
-  fromWard?: string; // For intake: Source/Supplier, For transfer: From Ward
-  toWard?: string; // For transfer: To Ward
-  performedBy: string;
-  timestamp: Date;
+  type: 'DISBURSEMENT' | 'TRANSFER_OUT' | 'SHIFT_TOTAL';
+  transferTo?: string;
+  notes?: string;
 }
 
-export type ViewState = 'DASHBOARD' | 'USAGE' | 'INTAKE' | 'TRANSFER' | 'CONSUMPTION' | 'MANAGEMENT';
-
-// Type definition for Gemini's FunctionCall
-export interface FunctionCall {
+export interface IntakeRecord {
+  date: string;
+  id: string;
   name: string;
-  args: { [key: string]: any };
-  id?: string;
+  quantityReceived: number;
+  receivedBy: string;
+  source?: string;
 }
+
+export type ViewState = 'SCANNER' | 'PENDING_LIST' | 'HISTORY' | 'INTAKE' | 'TRANSFER' | 'DASHBOARD' | 'INVENTORY';
+export type DashboardPeriod = 'MONTH' | 'QUARTER' | 'YEAR';
