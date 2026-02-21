@@ -62,7 +62,7 @@ import { summarizeUsage } from './services/geminiService';
 
 // Target URL for Google Apps Script - Updated as requested
 const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxgy6tpUu9UOSq1uyyVj4iPFDAUuyEonKVrr9FcKEb-24RoSPJHvrGvM62Ney9nzzzy_A/exec";
-const SHEET_LINK = "https://docs.google.com/spreadsheets/d/1wZwjqv-ocUKRIVbT0fW244lJAy6WEUvJj8WWtQqhhbs/edit?gid=0#gid=0";
+const SHEET_LINK = "https://docs.google.com/spreadsheets/d/1wZwjqv-ocUKRIVbT0fW244lJAy6WEUvJj8WWtQqhhbs/edit?usp=sharing";
 
 const STAFF_LIST = [
   "ยุพดี", "วชิราพร", "ภุมริน", "พัชราภรณ์", "สุภาพร", 
@@ -182,6 +182,7 @@ const App: React.FC = () => {
   const [isScannerOpen, setIsScannerOpen] = useState(false);
   const [scannerError, setScannerError] = useState<string | null>(null);
   const scannerRef = useRef<Html5Qrcode | null>(null);
+  const amountInputRef = useRef<HTMLInputElement>(null);
 
   const [targetId, setTargetId] = useState('');
   const [actionQty, setActionQty] = useState<number>(1);
@@ -297,6 +298,22 @@ const App: React.FC = () => {
 
   useEffect(() => {
     fetchInventory();
+  }, []);
+
+  useEffect(() => {
+    // 1. ดึงค่าจาก URL เมื่อเปิดแอป
+    const params = new URLSearchParams(window.location.search);
+    const idFromScan = params.get('id'); // ดึงค่าที่อยู่หลัง ?id=
+    
+    if (idFromScan) {
+      // 2. เอาค่า ID ไปใส่ใน State ที่ใช้เก็บรหัสพัสดุ
+      setTargetId(idFromScan.toUpperCase()); 
+      
+      // Auto focus on amount input
+      setTimeout(() => {
+        amountInputRef.current?.focus();
+      }, 500);
+    }
   }, []);
 
   useEffect(() => {
@@ -421,6 +438,11 @@ const App: React.FC = () => {
           setActionQty(1);
           stopScanner();
           new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3').play().catch(() => {});
+          
+          // Auto focus on amount input after scan
+          setTimeout(() => {
+            amountInputRef.current?.focus();
+          }, 500);
         },
         () => {}
       ).catch(err => {
@@ -593,7 +615,7 @@ const App: React.FC = () => {
   }
 
   return (
-    <div className="max-w-md mx-auto min-h-screen flex flex-col bg-slate-50 text-slate-800 font-sans shadow-2xl relative overflow-hidden pb-10">
+    <div className="w-full max-w-md md:max-w-4xl lg:max-w-6xl xl:max-w-7xl mx-auto min-h-screen flex flex-col bg-slate-50 text-slate-800 font-sans shadow-2xl relative overflow-hidden pb-10 print:max-w-none print:shadow-none print:bg-white print:pb-0">
       
       {showSuccess && (
         <div className="fixed top-20 left-1/2 -translate-x-1/2 z-[100] animate-in fade-in slide-in-from-top duration-300 print:hidden">
@@ -712,126 +734,126 @@ const App: React.FC = () => {
                 <h2 className="text-2xl font-black text-blue-900 tracking-tight">เบิกจ่ายพัสดุ</h2>
                 <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Disbursement System</p>
               </div>
-              <div className="bg-blue-600/10 text-blue-600 px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-tighter border border-blue-100">
-                Shift: {new Date().getHours() < 16 ? 'เช้า/บ่าย' : 'ดึก'}
-              </div>
             </div>
             
-            <div className="relative group overflow-hidden rounded-[32px] shadow-2xl border-4 border-white">
-              <div className="absolute inset-0 bg-gradient-to-br from-blue-600 to-indigo-900 opacity-90 z-10" />
-              <button 
-                onClick={startScanner} 
-                className="w-full aspect-[16/10] flex flex-col items-center justify-center relative z-20 transition-transform active:scale-95"
-              >
-                <div className="w-20 h-20 bg-white/20 rounded-full flex items-center justify-center mb-4 backdrop-blur-md animate-pulse">
-                  <Camera className="w-10 h-10 text-white" />
-                </div>
-                <span className="font-black text-white uppercase tracking-[0.2em] text-[10px]">แตะเพื่อสแกน QR Code</span>
-              </button>
-            </div>
-
-            <div className="bg-white p-7 rounded-[40px] shadow-xl border border-slate-100 space-y-7 relative overflow-hidden">
-              <div className="absolute top-0 right-0 w-32 h-32 bg-blue-50 rounded-full -mr-16 -mt-16 opacity-50 z-0" />
-              
-              <div className="space-y-3 relative z-10">
-                <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest flex items-center gap-2">
-                  <Hash className="w-3.5 h-3.5 text-blue-500" /> รหัสพัสดุ
-                </label>
-                <div className="flex gap-3">
-                  <input 
-                    type="text" 
-                    placeholder="รหัส หรือ ค้นหา..." 
-                    className="flex-1 px-5 py-4.5 bg-slate-50 rounded-[24px] outline-none font-mono text-sm border-2 border-transparent focus:border-blue-200 shadow-inner transition-all" 
-                    value={targetId} 
-                    onChange={(e) => setTargetId(e.target.value)} 
-                  />
-                  <button onClick={startScanner} className="p-4.5 bg-blue-600 text-white rounded-[24px] shadow-lg shadow-blue-200 active:scale-90 transition-all">
-                    <QrCode className="w-6 h-6" />
-                  </button>
-                </div>
+            <div className="md:grid md:grid-cols-2 md:gap-8 items-start">
+              <div className="relative group overflow-hidden rounded-[32px] shadow-2xl border-4 border-white mb-6 md:mb-0">
+                <div className="absolute inset-0 bg-gradient-to-br from-blue-600 to-indigo-900 opacity-90 z-10" />
+                <button 
+                  onClick={startScanner} 
+                  className="w-full aspect-[16/10] md:aspect-square flex flex-col items-center justify-center relative z-20 transition-transform active:scale-95"
+                >
+                  <div className="w-20 h-20 bg-white/20 rounded-full flex items-center justify-center mb-4 backdrop-blur-md animate-pulse">
+                    <Camera className="w-10 h-10 text-white" />
+                  </div>
+                  <span className="font-black text-white uppercase tracking-[0.2em] text-[10px]">แตะเพื่อสแกน QR Code</span>
+                </button>
               </div>
 
-              {foundItem ? (
-                <div className="bg-gradient-to-br from-blue-50/50 to-indigo-50/50 p-6 rounded-[32px] border-2 border-blue-100/50 animate-in zoom-in duration-300 relative overflow-hidden group">
-                  <div className="absolute top-0 right-0 p-3">
-                    <div className={`w-3 h-3 rounded-full ${foundItem.currentStock === 0 ? 'bg-red-500 animate-pulse' : 'bg-green-500'}`} />
-                  </div>
-                  <div className="flex flex-col gap-1 mb-4">
-                     <p className="text-[10px] font-black text-blue-600 uppercase tracking-tighter opacity-70">Item Found</p>
-                     <h3 className="font-black text-slate-800 text-lg leading-tight">{foundItem.name}</h3>
-                  </div>
-                  <div className="flex justify-between items-end pt-4 border-t border-blue-200/30">
-                    <div className="space-y-0.5">
-                      <p className="text-[9px] font-black text-slate-400 uppercase">Available Stock</p>
-                      <p className="text-2xl font-black text-blue-700 tracking-tighter">
-                        {foundItem.currentStock} <span className="text-xs font-bold opacity-50 uppercase">{foundItem.unit}</span>
-                      </p>
-                    </div>
-                    <span className="text-[10px] font-bold text-blue-400 bg-white px-3 py-1 rounded-full border border-blue-100 shadow-sm uppercase tracking-widest">{foundItem.id}</span>
-                  </div>
-                </div>
-              ) : targetId.trim() && (
-                <div className="p-5 bg-red-50 text-red-500 rounded-[28px] text-[11px] font-bold flex items-center gap-4 animate-pulse border-2 border-red-100">
-                  <AlertCircle className="w-6 h-6 flex-shrink-0" />
-                  <span>รหัสพัสดุ "{targetId.trim()}" ไม่พบข้อมูลในระบบ</span>
-                </div>
-              )}
-
-              <form onSubmit={addToPending} className="space-y-5 pt-4 relative z-10">
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
-                      <TrendingUp className="w-3.5 h-3.5 text-blue-500" /> จำนวน
-                    </label>
-                    <input 
-                      type="number" 
-                      className="w-full px-4 py-4 bg-slate-50 rounded-[24px] outline-none font-black text-blue-700 text-center text-2xl shadow-inner border-2 border-transparent focus:border-blue-100" 
-                      value={actionQty} 
-                      min={1} 
-                      onChange={(e) => setActionQty(parseInt(e.target.value) || 0)} 
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
-                      <BedDouble className="w-3.5 h-3.5 text-blue-500" /> เลขเตียง
-                    </label>
+              <div className="bg-white p-7 rounded-[40px] shadow-xl border border-slate-100 space-y-7 relative overflow-hidden">
+                <div className="absolute top-0 right-0 w-32 h-32 bg-blue-50 rounded-full -mr-16 -mt-16 opacity-50 z-0" />
+                
+                <div className="space-y-3 relative z-10">
+                  <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest flex items-center gap-2">
+                    <Hash className="w-3.5 h-3.5 text-blue-500" /> รหัสพัสดุ
+                  </label>
+                  <div className="flex gap-3">
                     <input 
                       type="text" 
-                      placeholder="Bed No." 
-                      required 
-                      className="w-full px-4 py-4 bg-slate-50 rounded-[24px] outline-none text-sm font-black text-slate-700 shadow-inner border-2 border-transparent focus:border-blue-100" 
-                      value={bedNumber} 
-                      onChange={(e) => setBedNumber(e.target.value)} 
+                      placeholder="รหัส หรือ ค้นหา..." 
+                      className="flex-1 px-5 py-4.5 bg-slate-50 rounded-[24px] outline-none font-mono text-sm border-2 border-transparent focus:border-blue-200 shadow-inner transition-all" 
+                      value={targetId} 
+                      onChange={(e) => setTargetId(e.target.value)} 
                     />
-                  </div>
-                </div>
-                
-                <div className="space-y-2">
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
-                    <UserCheck className="w-3.5 h-3.5 text-blue-500" /> เจ้าหน้าที่ผู้เบิก
-                  </label>
-                  <div className="relative">
-                    <select 
-                      required 
-                      className="w-full appearance-none px-6 py-4.5 bg-slate-50 rounded-[24px] outline-none text-sm font-black text-slate-700 shadow-inner border-2 border-transparent focus:border-blue-100" 
-                      value={staffName} 
-                      onChange={(e) => setStaffName(e.target.value)} 
-                    >
-                      <option value="">เลือกชื่อเจ้าหน้าที่...</option>
-                      {STAFF_LIST.map(name => (<option key={name} value={name}>{name}</option>))}
-                    </select>
-                    <ChevronRight className="absolute right-6 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-300 rotate-90" />
+                    <button onClick={startScanner} className="p-4.5 bg-blue-600 text-white rounded-[24px] shadow-lg shadow-blue-200 active:scale-90 transition-all">
+                      <QrCode className="w-6 h-6" />
+                    </button>
                   </div>
                 </div>
 
-                <button 
-                  type="submit" 
-                  disabled={!foundItem || actionQty <= 0 || !staffName || !bedNumber || isSyncing} 
-                  className="w-full py-5 bg-gradient-to-r from-blue-600 to-indigo-700 text-white rounded-[28px] font-black shadow-2xl active:scale-95 disabled:grayscale transition-all mt-4 uppercase tracking-[0.2em] text-[11px] flex items-center justify-center gap-3"
-                >
-                   {isSyncing ? <Loader2 className="w-6 h-6 animate-spin" /> : <><Plus className="w-6 h-6" /> เพิ่มรายการเบิก</>}
-                </button>
-              </form>
+                {foundItem ? (
+                  <div className="bg-gradient-to-br from-blue-50/50 to-indigo-50/50 p-6 rounded-[32px] border-2 border-blue-100/50 animate-in zoom-in duration-300 relative overflow-hidden group">
+                    <div className="absolute top-0 right-0 p-3">
+                      <div className={`w-3 h-3 rounded-full ${foundItem.currentStock === 0 ? 'bg-red-500 animate-pulse' : 'bg-green-500'}`} />
+                    </div>
+                    <div className="flex flex-col gap-1 mb-4">
+                       <p className="text-[10px] font-black text-blue-600 uppercase tracking-tighter opacity-70">Item Found</p>
+                       <h3 className="font-black text-slate-800 text-lg leading-tight">{foundItem.name}</h3>
+                    </div>
+                    <div className="flex justify-between items-end pt-4 border-t border-blue-200/30">
+                      <div className="space-y-0.5">
+                        <p className="text-[9px] font-black text-slate-400 uppercase">Available Stock</p>
+                        <p className="text-2xl font-black text-blue-700 tracking-tighter">
+                          {foundItem.currentStock} <span className="text-xs font-bold opacity-50 uppercase">{foundItem.unit}</span>
+                        </p>
+                      </div>
+                      <span className="text-[10px] font-bold text-blue-400 bg-white px-3 py-1 rounded-full border border-blue-100 shadow-sm uppercase tracking-widest">{foundItem.id}</span>
+                    </div>
+                  </div>
+                ) : targetId.trim() && (
+                  <div className="p-5 bg-red-50 text-red-500 rounded-[28px] text-[11px] font-bold flex items-center gap-4 animate-pulse border-2 border-red-100">
+                    <AlertCircle className="w-6 h-6 flex-shrink-0" />
+                    <span>รหัสพัสดุ "{targetId.trim()}" ไม่พบข้อมูลในระบบ</span>
+                  </div>
+                )}
+
+                <form onSubmit={addToPending} className="space-y-5 pt-4 relative z-10">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
+                        <TrendingUp className="w-3.5 h-3.5 text-blue-500" /> จำนวน
+                      </label>
+                      <input 
+                        ref={amountInputRef}
+                        type="number" 
+                        className="w-full px-4 py-4 bg-slate-50 rounded-[24px] outline-none font-black text-blue-700 text-center text-2xl shadow-inner border-2 border-transparent focus:border-blue-100" 
+                        value={actionQty} 
+                        min={1} 
+                        onChange={(e) => setActionQty(parseInt(e.target.value) || 0)} 
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
+                        <BedDouble className="w-3.5 h-3.5 text-blue-500" /> เลขเตียง
+                      </label>
+                      <input 
+                        type="text" 
+                        placeholder="Bed No." 
+                        required 
+                        className="w-full px-4 py-4 bg-slate-50 rounded-[24px] outline-none text-sm font-black text-slate-700 shadow-inner border-2 border-transparent focus:border-blue-100" 
+                        value={bedNumber} 
+                        onChange={(e) => setBedNumber(e.target.value)} 
+                      />
+                    </div>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
+                      <UserCheck className="w-3.5 h-3.5 text-blue-500" /> เจ้าหน้าที่ผู้เบิก
+                    </label>
+                    <div className="relative">
+                      <select 
+                        required 
+                        className="w-full appearance-none px-6 py-4.5 bg-slate-50 rounded-[24px] outline-none text-sm font-black text-slate-700 shadow-inner border-2 border-transparent focus:border-blue-100" 
+                        value={staffName} 
+                        onChange={(e) => setStaffName(e.target.value)} 
+                      >
+                        <option value="">เลือกชื่อเจ้าหน้าที่...</option>
+                        {STAFF_LIST.map(name => (<option key={name} value={name}>{name}</option>))}
+                      </select>
+                      <ChevronRight className="absolute right-6 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-300 rotate-90" />
+                    </div>
+                  </div>
+
+                  <button 
+                    type="submit" 
+                    disabled={!foundItem || actionQty <= 0 || !staffName || !bedNumber || isSyncing} 
+                    className="w-full py-5 bg-gradient-to-r from-blue-600 to-indigo-700 text-white rounded-[28px] font-black shadow-2xl active:scale-95 disabled:grayscale transition-all mt-4 uppercase tracking-[0.2em] text-[11px] flex items-center justify-center gap-3"
+                  >
+                     {isSyncing ? <Loader2 className="w-6 h-6 animate-spin" /> : <><Plus className="w-6 h-6" /> เพิ่มรายการเบิก</>}
+                  </button>
+                </form>
+              </div>
             </div>
           </div>
         )}
@@ -849,7 +871,7 @@ const App: React.FC = () => {
               </div>
             </div>
             
-            <div className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {pendingRecords.map((p, idx) => (
                 <div key={p.id} className="group bg-white p-5 rounded-[32px] border border-slate-100 shadow-xl shadow-slate-200/30 flex justify-between items-center relative overflow-hidden animate-in slide-in-from-bottom duration-300" style={{ animationDelay: `${idx * 80}ms` }}>
                   <div className="absolute top-0 left-0 w-2 h-full bg-gradient-to-b from-orange-400 to-amber-500 group-hover:w-3 transition-all" />
@@ -955,9 +977,19 @@ const App: React.FC = () => {
             <div className="flex justify-between items-start print:mb-10">
               <div className="flex flex-col gap-1">
                 <h2 className="text-2xl font-bold text-blue-900 tracking-tight">รายงานสรุปคลัง</h2>
-                <p className="text-[10px] text-slate-400 flex items-center gap-1.5 font-bold uppercase tracking-widest italic">
-                  <Calendar className="w-3.5 h-3.5" /> ข้อมูล ณ วันที่: {new Date().toLocaleDateString('th-TH', { day: 'numeric', month: 'long', year: 'numeric' })}
-                </p>
+                <div className="flex flex-wrap items-center gap-3">
+                  <p className="text-[10px] text-slate-400 flex items-center gap-1.5 font-bold uppercase tracking-widest italic">
+                    <Calendar className="w-3.5 h-3.5" /> ข้อมูล ณ วันที่: {new Date().toLocaleDateString('th-TH', { day: 'numeric', month: 'long', year: 'numeric' })}
+                  </p>
+                  <a 
+                    href={SHEET_LINK} 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="text-[10px] text-blue-600 hover:text-blue-800 flex items-center gap-1 font-bold uppercase tracking-widest border-b border-blue-200 hover:border-blue-600 transition-all print:hidden"
+                  >
+                    <ExternalLink className="w-3 h-3" /> ดูใน Google Sheet
+                  </a>
+                </div>
               </div>
               <div className="hidden print:block text-right">
                 <h3 className="font-bold text-slate-800 text-sm">Ward Inventory Hub</h3>
@@ -1067,7 +1099,7 @@ const App: React.FC = () => {
                 </div>
               </div>
               
-              <div className="space-y-3">
+              <div className="space-y-3 md:grid md:grid-cols-2 md:gap-x-12 md:gap-y-0">
                 {dashboardFilteredInventory.map(item => {
                   const isLow = item.currentStock <= item.min && item.currentStock > 0;
                   const isOut = item.currentStock === 0;
@@ -1145,7 +1177,7 @@ const App: React.FC = () => {
                </div>
              </div>
 
-             <div className="space-y-10">
+             <div className="space-y-10 md:grid md:grid-cols-2 md:gap-8 md:space-y-0">
                {Object.keys(filteredHistory).length > 0 ? Object.entries(filteredHistory).map(([dateGroup, items]) => (
                  <div key={dateGroup} className="space-y-4">
                    <div className="flex items-center gap-4 mb-2">
@@ -1264,7 +1296,7 @@ const App: React.FC = () => {
                    </button>
                 </div>
 
-                <div className="bg-white rounded-[40px] shadow-sm border border-slate-100 overflow-hidden p-2 print:border-none print:shadow-none print:p-0">
+                <div className="bg-white rounded-[40px] shadow-sm border border-slate-100 overflow-hidden p-2 print:border-none print:shadow-none print:p-0 md:grid md:grid-cols-2 md:gap-x-4">
                    {/* Table Header for print only */}
                    <div className="hidden print:grid grid-cols-6 gap-2 p-4 border-b-2 border-slate-300 font-black text-[10px] uppercase tracking-widest bg-slate-50">
                       <div>รหัส (ID)</div>
@@ -1315,40 +1347,42 @@ const App: React.FC = () => {
               <h2 className="text-xl font-bold text-blue-900">รับพัสดุเข้าคลัง</h2>
             </div>
 
-            <div className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100 space-y-6">
-              <div className="space-y-2">
-                <label className="text-[10px] font-black uppercase text-slate-400 tracking-tight">รหัสพัสดุ / ค้นหา</label>
-                <div className="flex gap-2">
-                  <input 
-                    type="text" 
-                    placeholder="ป้อนรหัสพัสดุ..." 
-                    className="flex-1 px-4 py-4 bg-slate-50 rounded-2xl outline-none font-mono text-sm border-2 border-transparent focus:border-blue-200 shadow-inner" 
-                    value={targetId} 
-                    onChange={(e) => setTargetId(e.target.value)} 
-                  />
-                  <button onClick={startScanner} className="p-4 bg-blue-50 text-blue-600 rounded-2xl hover:bg-blue-100 transition-colors">
-                    <QrCode className="w-6 h-6" />
-                  </button>
+            <div className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100 space-y-6 md:grid md:grid-cols-2 md:gap-8 md:space-y-0">
+              <div className="space-y-6">
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black uppercase text-slate-400 tracking-tight">รหัสพัสดุ / ค้นหา</label>
+                  <div className="flex gap-2">
+                    <input 
+                      type="text" 
+                      placeholder="ป้อนรหัสพัสดุ..." 
+                      className="flex-1 px-4 py-4 bg-slate-50 rounded-2xl outline-none font-mono text-sm border-2 border-transparent focus:border-blue-200 shadow-inner" 
+                      value={targetId} 
+                      onChange={(e) => setTargetId(e.target.value)} 
+                    />
+                    <button onClick={startScanner} className="p-4 bg-blue-50 text-blue-600 rounded-2xl hover:bg-blue-100 transition-colors">
+                      <QrCode className="w-6 h-6" />
+                    </button>
+                  </div>
                 </div>
-              </div>
 
-              {foundItem ? (
-                <div className="bg-green-50/50 p-5 rounded-3xl border border-green-100 animate-in zoom-in duration-300">
-                  <div className="flex justify-between items-start mb-2">
-                     <h3 className="font-bold text-green-900 text-sm leading-tight flex-1 pr-4">{foundItem.name}</h3>
-                     <span className="text-[8px] bg-green-600 text-white px-2 py-0.5 rounded-full font-bold uppercase tracking-widest">{foundItem.id}</span>
+                {foundItem ? (
+                  <div className="bg-green-50/50 p-5 rounded-3xl border border-green-100 animate-in zoom-in duration-300">
+                    <div className="flex justify-between items-start mb-2">
+                       <h3 className="font-bold text-green-900 text-sm leading-tight flex-1 pr-4">{foundItem.name}</h3>
+                       <span className="text-[8px] bg-green-600 text-white px-2 py-0.5 rounded-full font-bold uppercase tracking-widest">{foundItem.id}</span>
+                    </div>
+                    <div className="flex justify-between items-end mt-4 pt-4 border-t border-green-100/50">
+                      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">สต็อกปัจจุบัน:</p>
+                      <p className="text-lg font-black text-green-700">{foundItem.currentStock} <span className="text-[10px] font-bold text-green-400">{foundItem.unit}</span></p>
+                    </div>
                   </div>
-                  <div className="flex justify-between items-end mt-4 pt-4 border-t border-green-100/50">
-                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">สต็อกปัจจุบัน:</p>
-                    <p className="text-lg font-black text-green-700">{foundItem.currentStock} <span className="text-[10px] font-bold text-green-400">{foundItem.unit}</span></p>
+                ) : targetId.trim() && (
+                  <div className="p-4 bg-red-50 text-red-500 rounded-2xl text-[10px] font-bold flex items-center gap-3 animate-pulse border border-red-100">
+                    <AlertCircle className="w-5 h-5 flex-shrink-0" />
+                    <span>ไม่พบพัสดุนี้ในคลัง</span>
                   </div>
-                </div>
-              ) : targetId.trim() && (
-                <div className="p-4 bg-red-50 text-red-500 rounded-2xl text-[10px] font-bold flex items-center gap-3 animate-pulse border border-red-100">
-                  <AlertCircle className="w-5 h-5 flex-shrink-0" />
-                  <span>ไม่พบพัสดุนี้ในคลัง</span>
-                </div>
-              )}
+                )}
+              </div>
 
               <form onSubmit={handleIntake} className="space-y-5">
                 <div className="space-y-1">
@@ -1393,40 +1427,42 @@ const App: React.FC = () => {
               <h2 className="text-xl font-bold text-blue-900">โอนย้ายพัสดุ</h2>
             </div>
 
-            <div className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100 space-y-6">
-              <div className="space-y-2">
-                <label className="text-[10px] font-black uppercase text-slate-400 tracking-tight">รหัสพัสดุ / ค้นหา</label>
-                <div className="flex gap-2">
-                  <input 
-                    type="text" 
-                    placeholder="ป้อนรหัสพัสดุ..." 
-                    className="flex-1 px-4 py-4 bg-slate-50 rounded-2xl outline-none font-mono text-sm border-2 border-transparent focus:border-blue-200 shadow-inner" 
-                    value={targetId} 
-                    onChange={(e) => setTargetId(e.target.value)} 
-                  />
-                  <button onClick={startScanner} className="p-4 bg-blue-50 text-blue-600 rounded-2xl hover:bg-blue-100 transition-colors">
-                    <QrCode className="w-6 h-6" />
-                  </button>
+            <div className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100 space-y-6 md:grid md:grid-cols-2 md:gap-8 md:space-y-0">
+              <div className="space-y-6">
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black uppercase text-slate-400 tracking-tight">รหัสพัสดุ / ค้นหา</label>
+                  <div className="flex gap-2">
+                    <input 
+                      type="text" 
+                      placeholder="ป้อนรหัสพัสดุ..." 
+                      className="flex-1 px-4 py-4 bg-slate-50 rounded-2xl outline-none font-mono text-sm border-2 border-transparent focus:border-blue-200 shadow-inner" 
+                      value={targetId} 
+                      onChange={(e) => setTargetId(e.target.value)} 
+                    />
+                    <button onClick={startScanner} className="p-4 bg-blue-50 text-blue-600 rounded-2xl hover:bg-blue-100 transition-colors">
+                      <QrCode className="w-6 h-6" />
+                    </button>
+                  </div>
                 </div>
-              </div>
 
-              {foundItem ? (
-                <div className="bg-orange-50/50 p-5 rounded-3xl border border-orange-100 animate-in zoom-in duration-300">
-                  <div className="flex justify-between items-start mb-2">
-                     <h3 className="font-bold text-orange-900 text-sm leading-tight flex-1 pr-4">{foundItem.name}</h3>
-                     <span className="text-[8px] bg-orange-600 text-white px-2 py-0.5 rounded-full font-bold uppercase tracking-widest">{foundItem.id}</span>
+                {foundItem ? (
+                  <div className="bg-orange-50/50 p-5 rounded-3xl border border-orange-100 animate-in zoom-in duration-300">
+                    <div className="flex justify-between items-start mb-2">
+                       <h3 className="font-bold text-orange-900 text-sm leading-tight flex-1 pr-4">{foundItem.name}</h3>
+                       <span className="text-[8px] bg-orange-600 text-white px-2 py-0.5 rounded-full font-bold uppercase tracking-widest">{foundItem.id}</span>
+                    </div>
+                    <div className="flex justify-between items-end mt-4 pt-4 border-t border-orange-100/50">
+                      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">สต็อกปัจจุบัน:</p>
+                      <p className="text-lg font-black text-orange-700">{foundItem.currentStock} <span className="text-[10px] font-bold text-orange-400">{foundItem.unit}</span></p>
+                    </div>
                   </div>
-                  <div className="flex justify-between items-end mt-4 pt-4 border-t border-orange-100/50">
-                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">สต็อกปัจจุบัน:</p>
-                    <p className="text-lg font-black text-orange-700">{foundItem.currentStock} <span className="text-[10px] font-bold text-orange-400">{foundItem.unit}</span></p>
+                ) : targetId.trim() && (
+                  <div className="p-4 bg-red-50 text-red-500 rounded-2xl text-[10px] font-bold flex items-center gap-3 animate-pulse border border-red-100">
+                    <AlertCircle className="w-5 h-5 flex-shrink-0" />
+                    <span>ไม่พบพัสดุนี้ในคลัง</span>
                   </div>
-                </div>
-              ) : targetId.trim() && (
-                <div className="p-4 bg-red-50 text-red-500 rounded-2xl text-[10px] font-bold flex items-center gap-3 animate-pulse border border-red-100">
-                  <AlertCircle className="w-5 h-5 flex-shrink-0" />
-                  <span>ไม่พบพัสดุนี้ในคลัง</span>
-                </div>
-              )}
+                )}
+              </div>
 
               <form onSubmit={handleTransfer} className="space-y-4">
                 <div className="grid grid-cols-2 gap-4">
@@ -1490,7 +1526,7 @@ const App: React.FC = () => {
 
       </main>
 
-      <nav className="fixed bottom-7 left-1/2 -translate-x-1/2 w-[94%] max-w-[380px] bg-white/95 backdrop-blur-2xl border border-white/50 p-3 rounded-[40px] shadow-2xl flex items-center justify-between z-50 print:hidden">
+      <nav className="fixed bottom-7 left-1/2 -translate-x-1/2 w-[94%] max-w-md md:max-w-lg bg-white/95 backdrop-blur-2xl border border-white/50 p-3 rounded-[40px] shadow-2xl flex items-center justify-between z-50 print:hidden">
         <button onClick={() => setView('SCANNER')} className={`flex-1 flex flex-col items-center justify-center py-2.5 transition-all ${view === 'SCANNER' ? 'text-blue-600 scale-110' : 'text-slate-300 hover:text-slate-400'}`}>
           <QrCode className="w-5.5 h-5.5" /><span className="text-[8px] font-black mt-1.5 uppercase tracking-widest">เบิกจ่าย</span>
         </button>
@@ -1542,32 +1578,46 @@ const App: React.FC = () => {
             margin: 0 !important; 
             display: block !important;
           }
-          nav, header, button, .print-hidden, [role="button"], input, select { display: none !important; }
-          .bg-slate-50, .bg-white, .bg-blue-50, .bg-red-50, .bg-amber-50, .bg-gradient-to-br { background: white !important; background-image: none !important; }
+          nav, header, button, .print-hidden, [role="button"], input, select, .print\:hidden { display: none !important; }
+          .bg-slate-50, .bg-white, .bg-blue-50, .bg-red-50, .bg-amber-50 { background: white !important; }
           .shadow-sm, .shadow-2xl, .shadow-xl, .shadow-md, .shadow-inner { box-shadow: none !important; }
           .border { border: 1px solid #eee !important; }
           .p-6, .p-7 { padding: 0 !important; }
-          h2 { font-size: 18pt !important; margin-bottom: 20pt !important; color: black !important; font-weight: bold !important; display: block !important; }
+          h2 { font-size: 20pt !important; margin-bottom: 20pt !important; color: black !important; font-weight: bold !important; display: block !important; }
           
           /* Dashboard Layout in Print */
-          .grid { display: grid !important; grid-template-columns: repeat(2, 1fr) !important; gap: 15pt !important; }
-          .bg-white.p-6.rounded-[32px] { border: 1px solid #ddd !important; border-radius: 12pt !important; padding: 15pt !important; margin-bottom: 10pt !important; }
+          .grid { display: grid !important; grid-template-columns: repeat(2, 1fr) !important; gap: 20pt !important; }
+          .grid-cols-3 { grid-template-columns: repeat(3, 1fr) !important; }
+          .bg-white.p-6.rounded-\[32px\] { border: 1px solid #ddd !important; border-radius: 12pt !important; padding: 15pt !important; margin-bottom: 15pt !important; }
           .bg-white.p-4.rounded-3xl { border: 1px solid #ddd !important; border-radius: 12pt !important; padding: 10pt !important; }
-          .bg-gradient-to-br.from-red-50 { border: 2px solid #ff4d4d !important; padding: 15pt !important; border-radius: 15pt !important; margin-top: 20pt !important; background: #fff8f8 !important; }
+          
+          /* Specific Critical Items Box */
+          .bg-gradient-to-br.from-red-50 { 
+            border: 2px solid #ef4444 !important; 
+            padding: 20pt !important; 
+            border-radius: 20pt !important; 
+            margin-top: 20pt !important; 
+            background: #fffafa !important;
+            grid-column: span 2 !important;
+          }
           
           /* General Print Styles */
-          .space-y-3 > div { border-bottom: 1px solid #eee !important; padding: 8pt 0 !important; page-break-inside: avoid; }
-          .w-1.5.h-1.5 { border: 1px solid black !important; }
-          span[class*="text-red-600"], span[class*="text-amber-500"], span[class*="text-green-600"] { font-weight: bold !important; color: black !important; }
-          svg { width: 100pt !important; height: 100pt !important; }
+          .space-y-3 > div { border-bottom: 1px solid #eee !important; padding: 10pt 0 !important; page-break-inside: avoid; }
+          .w-1.5.h-1.5 { border: 1px solid #000 !important; }
           
-          /* Specific Inventory Table styles for Print */
-          .print\\:grid { display: grid !important; }
-          .print\\:grid-cols-6 { grid-template-columns: 1fr 2fr 1fr 1fr 1fr !important; }
-          .print\\:border-slate-300 { border-color: #cbd5e1 !important; }
-          .print\\:font-black { font-weight: 900 !important; }
-          .print\\:text-\\[10pt\\] { font-size: 10pt !important; }
-          .print\\:py-3 { padding-top: 0.75rem !important; padding-bottom: 0.75rem !important; }
+          /* Chart SVGs */
+          .relative.w-32.h-32 svg { width: 120pt !important; height: 120pt !important; }
+          
+          /* Inventory Table styles for Print */
+          .print\:grid { display: grid !important; }
+          .print\:grid-cols-6 { grid-template-columns: 1.5fr 3fr 1fr 1fr 1fr !important; gap: 10pt !important; }
+          .print\:border-slate-300 { border-color: #000 !important; border-bottom-width: 2pt !important; }
+          .print\:font-black { font-weight: bold !important; }
+          .print\:text-\[10pt\] { font-size: 10pt !important; }
+          .print\:py-3 { padding-top: 10pt !important; padding-bottom: 10pt !important; border-bottom: 1px solid #eee !important; }
+          
+          /* Ensure text is black for printing */
+          .text-slate-800, .text-slate-600, .text-blue-900 { color: black !important; }
         }
         ::-webkit-scrollbar { width: 0px; display: none; }
         .scrollbar-hide::-webkit-scrollbar { display: none; }
