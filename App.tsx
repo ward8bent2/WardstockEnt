@@ -157,7 +157,10 @@ const App: React.FC = () => {
   const [view, setView] = useState<ViewState>('SCANNER');
   const [inventory, setInventory] = useState<InventoryItem[]>([]);
   const [history, setHistory] = useState<any[]>([]);
-  const [pendingRecords, setPendingRecords] = useState<PendingRecord[]>([]);
+  const [pendingRecords, setPendingRecords] = useState<PendingRecord[]>(() => {
+    const saved = localStorage.getItem('wardstock_pending');
+    return saved ? JSON.parse(saved) : [];
+  });
   const [isLoading, setIsLoading] = useState(true);
   const [fetchError, setFetchError] = useState<string | null>(null);
   const [dashboardSearch, setDashboardSearch] = useState('');
@@ -323,6 +326,10 @@ const App: React.FC = () => {
       fetchInventory();
     }
   }, [view]);
+
+  useEffect(() => {
+    localStorage.setItem('wardstock_pending', JSON.stringify(pendingRecords));
+  }, [pendingRecords]);
 
   const foundItem = useMemo(() => {
     const searchId = targetId.trim().toUpperCase();
@@ -491,6 +498,7 @@ const App: React.FC = () => {
         });
       }
       setPendingRecords([]);
+      localStorage.removeItem('wardstock_pending');
       setShowSuccess(true);
       setTimeout(() => setShowSuccess(false), 2000);
       setView('SCANNER');
