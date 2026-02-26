@@ -440,8 +440,11 @@ const App: React.FC = () => {
         { facingMode: "environment" },
         { fps: 10, qrbox: { width: 250, height: 250 } },
         (decodedText) => {
-          const result = decodedText.trim().toUpperCase();
-          setTargetId(result);
+          let result = decodedText.trim();
+          if (result.includes('?id=')) {
+            result = result.split('?id=')[1].split('&')[0];
+          }
+          setTargetId(result.toUpperCase());
           setActionQty(1);
           stopScanner();
           new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3').play().catch(() => {});
